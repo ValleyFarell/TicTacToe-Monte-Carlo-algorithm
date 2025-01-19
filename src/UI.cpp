@@ -1,54 +1,8 @@
-#include<SFML/Graphics.hpp>
-#include<vector>
-#include<cmath>
-#include<iostream>
-
-#include"MCTS.h"
-
-class TicTacToeUI {
-public:
-    TicTacToeUI();
-    void run();
-private:
-    const int fieldSize = 3;
-    const int windowSize = 600;
-    const int targetSize = 3;
-    
-    int gridWidth;
-
-    int toeRadius;
-    int outline;
-    const double goldenRatio = 1.618;
-    const double outlinePercents = 0.25;
-    const int widthK = 2; // Коэффициент ширины ноликов
-
-    int crossWidth;
-    int crossHeight;
-    const int crossAngel = 45;
-
-    bool isUnpressed;
-
-    void init();
-    void drawField();
-    void handleInput(sf::Event event);
-
-    void toeDraw(int i, int j);
-    void crossDraw(int i, int j);
-    void cellDraw(int i, int j);
-
-    sf::RenderWindow window;
-    std::vector<std::vector<char>> field; // '0' - пусто, '1' - крестик, '2' - нолик
-    int currentPlayer;
-    int cellSize;
-    int gameWinner;
-
-    MCT bot;
-};
+#include"../include/UI.h"
 
 TicTacToeUI::TicTacToeUI() 
     : window(sf::VideoMode(windowSize, windowSize), "Крестики-Нолики"), 
-      cellSize(windowSize / fieldSize), 
-      isUnpressed(true) {
+      cellSize(windowSize / fieldSize), bot(&mech), unpressedSpace(true) {
             toeRadius = (double)cellSize / 2 / goldenRatio;
             outline = (double)toeRadius * outlinePercents;
             crossHeight = sqrt(2) * (double)cellSize / goldenRatio;
@@ -58,9 +12,9 @@ TicTacToeUI::TicTacToeUI()
       }
 
 void TicTacToeUI::init() {
-    field = std::vector<std::vector<char>>(fieldSize, std::vector<char>(fieldSize, 0));
+    mech.clearField();
     currentPlayer = 1;
-    gameWinner = -1; 
+    gameWinner = 0; 
     window.setTitle("TicTacToe");
 }
 
@@ -69,23 +23,26 @@ void TicTacToeUI::run() {
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::MouseButtonReleased || sf::Event::KeyReleased)
-                isUnpressed = true;
             if (event.type == sf::Event::Closed)
                 window.close();
-            if ((event.type == sf::Event::MouseButtonPressed || event.type == sf::Event::KeyPressed) && isUnpressed) {
-                if (gameWinner == -1) {
-                    isUnpressed = false;
-                    handleInput(event);
-                    gameWinner = bot.update(field, targetSize);
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Space) {
+                unpressedSpace = true;
+            }
+            if (!gameWinner && (event.type == sf::Event::MouseButtonPressed || event.key.code == sf::Keyboard::Space)) {
+                     handleInput(event);
                     drawField();
-                } else {
-                    field = std::vector<std::vector<char>>(fieldSize, std::vector<char>(fieldSize, 0));
-                    currentPlayer = 1;
-                    gameWinner = -1;
-                    window.setTitle("TicTacToe");
-                    drawField();
-                }
+            }
+            if (gameWinner) {
+                if (gameWinner == 3) 
+                window.setTitle("TicTacToe Draw!!");
+                else window.setTitle((gameWinner == 1) ? "TicTacToe winner: Cross!!":"TicTacToe winner: Toe!!");
+            }
+            if ((event.key.code == sf::Keyboard::R)) {
+                mech.clearField();
+                currentPlayer = 1;
+                gameWinner = 0;
+                window.setTitle("TicTacToe");
+                drawField();
             }
         }
     }
@@ -95,14 +52,21 @@ void TicTacToeUI::handleInput(sf::Event event) {
     if (event.mouseButton.button == sf::Mouse::Left) { // User vs user
         int x = event.mouseButton.x / cellSize;
         int y = event.mouseButton.y / cellSize;
-        if (x < fieldSize && y < fieldSize && field[y][x] == 0) {
-            field[y][x] = currentPlayer;
+        if (x < fieldSize && y < fieldSize && mech.field[y][x] == 0) {
+            mech.field[y][x] = currentPlayer;
             currentPlayer = 3 - currentPlayer; // Смена игрока
+            gameWinner = mech.update(y, x);
+            if (mech.isDraw()) gameWinner = 3;
         }
-    } else if(event.type == sf::Event::KeyPressed) { // User vs bot
-        std::pair<int, int> move = bot.getMove(field, currentPlayer);
-        field[move.first][move.second] = currentPlayer;
+        std::cout << gameWinner  << " " << y << " " << x << "\n";
+    } else if(event.key.code == sf::Keyboard::Space && unpressedSpace && event.type == sf::Event::KeyPressed) { // User vs bot
+        std::pair<int, int> move = bot.getMove(mech.field, 3 - currentPlayer);
+        mech.field[move.first][move.second] = currentPlayer;
         currentPlayer = 3 - currentPlayer;
+        unpressedSpace = false;
+        gameWinner = mech.update(move.first, move.second);
+        if (mech.isDraw()) gameWinner = 3;
+        std::cout << gameWinner << " " << move.first << " " << move.second << "\n";
     }
 }
 
@@ -112,9 +76,9 @@ void TicTacToeUI::drawField() {
     for (int i = 0; i < fieldSize; ++i) {
         for (int j = 0; j < fieldSize; ++j) {
             cellDraw(i, j);
-            if (field[i][j] == 1) {
+            if (mech.field[i][j] == 1) {
                 crossDraw(i, j);
-            } else if (field[i][j] == 2) {
+            } else if (mech.field[i][j] == 2) {
                 toeDraw(i, j);
             }
         }
@@ -153,4 +117,3 @@ void TicTacToeUI::crossDraw(int i, int j) {
     rect1.rotate(45 + crossAngel);
     window.draw(rect1);
 }
-
