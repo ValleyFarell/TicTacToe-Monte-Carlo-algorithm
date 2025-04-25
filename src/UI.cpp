@@ -2,7 +2,7 @@
 
 TicTacToeUI::TicTacToeUI() 
     : window(sf::VideoMode(windowSize, windowSize), "Крестики-Нолики"), 
-      cellSize(windowSize / fieldSize), bot(&mech), unpressedSpace(true) {
+      cellSize(windowSize / fieldSize), bot(&mech), unpressedSpace(true), unpressedL(true) {
             toeRadius = (double)cellSize / 2 / goldenRatio;
             outline = (double)toeRadius * outlinePercents;
             crossHeight = sqrt(2) * (double)cellSize / goldenRatio;
@@ -28,9 +28,14 @@ void TicTacToeUI::run() {
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Space) {
                 unpressedSpace = true;
             }
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::L) {
+                unpressedL = true;
+            }
             if (!gameWinner && (event.type == sf::Event::MouseButtonPressed || event.key.code == sf::Keyboard::Space)) {
-                     handleInput(event);
-                    drawField();
+                std::cout << currentPlayer << " player\n";
+                handleInput(event);
+                std::cout << currentPlayer << " player\n";
+                drawField();
             }
             if (gameWinner) {
                 if (gameWinner == 3) 
@@ -41,6 +46,14 @@ void TicTacToeUI::run() {
                 mech.clearField();
                 currentPlayer = 1;
                 gameWinner = 0;
+                window.setTitle("TicTacToe");
+                drawField();
+            }
+            if ((event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::L) && unpressedL) {
+                std::cout << "change!!!\n";
+                unpressedL = false;
+                mech.field[mech.lastY][mech.lastX] = 0;
+                currentPlayer = 3 - currentPlayer;
                 window.setTitle("TicTacToe");
                 drawField();
             }
@@ -56,12 +69,16 @@ void TicTacToeUI::handleInput(sf::Event event) {
             mech.field[y][x] = currentPlayer;
             currentPlayer = 3 - currentPlayer; // Смена игрока
             gameWinner = mech.update(y, x);
+            mech.lastX = x;
+            mech.lastY = y;
             if (mech.isDraw()) gameWinner = 3;
         }
         std::cout << gameWinner  << " " << y << " " << x << "\n";
     } else if(event.key.code == sf::Keyboard::Space && unpressedSpace && event.type == sf::Event::KeyPressed) { // User vs bot
         std::pair<int, int> move = bot.getMove(mech.field, 3 - currentPlayer);
         mech.field[move.first][move.second] = currentPlayer;
+        mech.lastX = move.second;
+        mech.lastY = move.first;
         currentPlayer = 3 - currentPlayer;
         unpressedSpace = false;
         gameWinner = mech.update(move.first, move.second);

@@ -47,7 +47,8 @@ private:
     int gameWinner;
 
     bool unpressedSpace;
-
+    bool unpressedL;
+    
     Mechanics mech;
     MCT bot;
 };

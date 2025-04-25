@@ -16,6 +16,8 @@ private:
 public:
     int field[fieldSize][fieldSize]; // '0' - пусто, '1' - крестик, '2' - нолик
     int trialField[fieldSize][fieldSize]; // Экспериментальное поле для симуляций
+    int lastX = 0;
+    int lastY = 0;
     int update(int x, int y);
     int update(int field[fieldSize][fieldSize], int x, int y);
     int randomSimulation(int field[fieldSize][fieldSize], int currPlayer);
